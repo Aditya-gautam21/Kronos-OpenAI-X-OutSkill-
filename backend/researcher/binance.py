@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from dotenv import load_dotenv
 from binance.client import Client
 
@@ -15,22 +16,19 @@ class BINANCE:
         )
 
     def load_data(self):
-        klines = self.public_client.futures_klines(symbol='ETHUSDT', interval='1h', limit=200)
+        all_data = []
+
+        klines = self.public_client.futures_klines(symbol='ETHUSDT', interval='1h', limit=1000)
+        for k in klines:
+            all_data.append(k)
+
+        data = pd.DataFrame(all_data, columns=["timestamp", "open", "high", "low", "close", "volume",
+        "close_time", "quote_volume", "trades",
+        "taker_buy_base", "taker_buy_quote","ignore"])
         
+        
+        data["timestamp"] = pd.to_datetime(data["timestamp"], unit="ms")
+        data.set_index("timestamp", inplace=True)
+        data = data[["open", "high", "low", "close", "volume"]].astype(float)
 
-
-
-if __name__ == "__main__":
-    klines = self.public_client.futures_klines(symbol="BTCUSDT", interval="1d", limit=5)
-    print("Public API works — latest 5 daily candles:")
-    for k in klines:
-        print(f"  Open time: {k[0]}, Close: {k[4]}")
-
-    try:
-        account = self.testnet_client.futures_account()
-        balances = [b for b in account["assets"] if float(b["walletBalance"]) > 0]
-        print(f"\nTestnet auth works — {len(balances)} assets with balance")
-        for b in balances[:5]:
-            print(f"  {b['asset']}: {b['walletBalance']}")
-    except Exception as e:
-        print(f"\nTestnet auth failed — check your API key/secret: {e}")
+        return data

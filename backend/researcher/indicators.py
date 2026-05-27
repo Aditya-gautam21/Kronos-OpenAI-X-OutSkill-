@@ -7,7 +7,7 @@ from backend.researcher.binance import BINANCE
 
 class TechnicalIndicators:
     def calculate_indicators(self, data):
-        print(f"\n Calculating technical indicators")
+        #print(f"\n Calculating technical indicators")
 
         df = data.copy()
         df.sort_index(inplace = True)
@@ -27,13 +27,14 @@ class TechnicalIndicators:
 
         macd_df = ta.macd(close, fast=12, slow=26, signal=9)
         indicators['MACD'] = macd_df.iloc[:, 0]
+        indicators['MACDs'] = macd_df.iloc[:, 2]
 
         bb_df = ta.bbands(close, length=20, std=2)
         indicators['BB_LOWER'] = bb_df.iloc[:, 0]
         indicators['BB_UPPER'] = bb_df.iloc[:, 2]
 
-        print(f"Addedd {len(indicators.columns)} technical indicators")
-        print(f"Indicators columns: {indicators.columns.tolist()}\n")
+        #print(f"Addedd {len(indicators.columns)} technical indicators")
+        #print(f"Indicators columns: {indicators.columns.tolist()}\n")
 
         return indicators
     
@@ -44,11 +45,3 @@ class TechnicalIndicators:
         indicators = self.calculate_indicators(data)
 
         return data.join(indicators).dropna()
-
-if __name__ == '__main__':
-    bi = BINANCE()
-    indi = TechnicalIndicators()
-
-    data = bi.load_data()
-    df = indi.ohlcv_indicators_combined()
-    print(df)

@@ -1,15 +1,15 @@
 import os
-import json
 from contextlib import redirect_stderr
 from backend.local_llm import get_llm
 from backend.researcher.indicators import TechnicalIndicators
 from backend.researcher.sentiment import SentimentAnalyzer
 from backend.researcher.summary import summarize_for_llm
 from backend.utils.prompts import Prompts
+from backend.deepseek_llm import get_deepseek_llm
 
 class ResearchAgent:
     def __init__(self):
-        get_llm()
+        get_deepseek_llm()
 
     def research(self):
         technical_data = TechnicalIndicators().ohlcv_indicators_combined()
@@ -19,19 +19,17 @@ class ResearchAgent:
 
         prompt = Prompts.research_prompt(summary, technical_data)
 
-        with open(os.devnull, "w") as devnull, redirect_stderr(devnull):
-            response = get_llm().create_chat_completion(
-                messages=[
-                    {
-                        'role':'system',
-                        'content': prompt
-                    },
-                    {
-                        'role': 'user',
-                        'content': json.dumps(summary),
-                    }
-                ],
-                temperature=0.25
-            )
+        response = get_deepseek_llm().invoke([
+                {
+                    'role': 'system',
+                    'content': prompt
+                },
+                {
+                    'role': 'user',
+                    'content': 'Analyze the market data above and output your trade plan.',
+                }
+            ],
+            temperature=0.21
+        )
 
-        return (response['choices'][0]['message']['content'])
+        return response.content

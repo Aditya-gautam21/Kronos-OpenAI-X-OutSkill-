@@ -1,5 +1,6 @@
+import concurrent.futures
+import urllib.request
 import feedparser
-import pandas as pd
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -10,10 +11,10 @@ ASSET_KEYWORDS = {
 }
 
 
+
 class NewsCollector:
     def __init__(self, data_dir="./raw_data"):
         self.rss_feeds = {
-            # crypto news sites
             "CoinDesk": "https://www.coindesk.com/arc/outboundfeeds/rss/?outputType=xml",
             "Cointelegraph": "https://cointelegraph.com/rss",
             "CryptoSlate": "https://cryptoslate.com/feed/",
@@ -22,13 +23,45 @@ class NewsCollector:
             "Bitcoin.com": "https://news.bitcoin.com/feed/",
             "Blockonomi": "https://blockonomi.com/feed/",
             "Coinspeaker": "https://www.coinspeaker.com/feed/",
-            "r/CryptoCurrency": "https://www.reddit.com/r/CryptoCurrency/.rss",
-            "r/ethereum": "https://www.reddit.com/r/ethereum/.rss",
-            "r/Bitcoin": "https://www.reddit.com/r/Bitcoin/.rss",
-            "r/CryptoMarkets": "https://www.reddit.com/r/CryptoMarkets/.rss",
         }
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
+
+    def _fetch_one(self, source: str, url: str, keywords: list[str], cutoff_time: datetime) -> list[dict]:
+        """Fetch and parse a single RSS feed with HTTP timeout."""
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Kronos/1.0"})
+            with urllib.request.urlopen(req) as resp:
+                raw = resp.read()
+            feed = feedparser.parse(raw)
+        except Exception:
+            return []
+
+        results = []
+        for entry in feed.entries:
+            try:
+                if not hasattr(entry, "published_parsed") or entry.published_parsed is None:
+                    continue
+                published = datetime(*entry.published_parsed[:6])
+                if published <= cutoff_time:
+                    continue
+
+                title = entry.get("title", "")
+                summary_text = entry.get("summary", "")
+                text = (title + " " + summary_text).lower()
+                if not any(kw in text for kw in keywords):
+                    continue
+
+                results.append({
+                    "source": source,
+                    "title": title,
+                    "published": published.isoformat(),
+                    "summary": summary_text[:200],
+                })
+            except Exception:
+                pass
+
+        return results
 
     def fetch_news(self, hours=12, asset="ETHUSDT"):
         keywords = ASSET_KEYWORDS.get(asset, [])

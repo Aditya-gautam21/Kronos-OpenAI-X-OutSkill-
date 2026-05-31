@@ -20,7 +20,7 @@ All decisions surface to a CIO dashboard for approval, override, or audit.
 
 ## Project Structure
 
-```
+```text
 backend/
 ├── researcher/
 │   ├── binance.py           # Binance Futures public + testnet client
@@ -39,8 +39,18 @@ backend/
 │   ├── extract_json.py      # JSON extraction from LLM output
 │   ├── prompts.py           # Prompt templates
 │   └── stratigies.py        # Strategy definitions
+├── routes/
+│   └── trader.py            # FastAPI endpoints for CIO dashboard and bot execution
+├── main.py                  # FastAPI application entry point
+├── state.py                 # Backend state and logging manager
 ├── local_llm.py             # Local LLM wrapper (llama-cpp-python)
+├── deepseek_llm.py          # DeepSeek API integration
 └── trade_execution_agent.py # Binance Testnet paper trading
+
+frontend/
+├── src/                     # Next.js frontend application (React, Tailwind CSS, Recharts)
+├── public/                  # Static assets
+└── package.json             # Frontend dependencies
 ```
 
 ## Tech Stack
@@ -71,19 +81,33 @@ LOCAL_MODEL_PATH=/path/to/gguf/model
 
 ### Install
 
+**Backend (Python):**
 ```bash
 conda create -n kronos python=3.12
 conda activate kronos
-pip install python-binance pandas numpy pandas-ta feedparser llama-cpp-python transformers torch python-dotenv
+pip install python-binance pandas numpy pandas-ta feedparser llama-cpp-python transformers torch python-dotenv fastapi uvicorn
+```
+
+**Frontend (Node.js):**
+```bash
+cd frontend
+npm install
 ```
 
 ### Run
 
+Start the backend API server:
 ```bash
-python backend/researcher/research_agent.py   # Run researcher agent
-python backend/quant/agent.py                 # Run quant agent
-python backend/trade_execution_agent.py       # Start paper trading
+python -m uvicorn backend.main:app --reload --port 8000
 ```
+
+Start the Next.js CIO Dashboard (in a new terminal):
+```bash
+cd frontend
+npm run dev
+```
+
+The frontend will be available at `http://localhost:3000`. You can start the autonomous bot directly from the dashboard UI.
 
 ## Build Status (Hackathon Day 1–3)
 
@@ -92,8 +116,8 @@ python backend/trade_execution_agent.py       # Start paper trading
 - [x] Trade Execution Agent — Binance Testnet paper trading
 - [ ] Risk Agent — stress testing, overfitting detection, correlation checks
 - [ ] Portfolio Agent — dynamic rebalancing across active strategies
-- [ ] CIO Dashboard — Next.js frontend
-- [ ] FastAPI orchestration, Supabase integration, Redis queue, Docker
+- [x] CIO Dashboard — Next.js frontend built with React, Tailwind CSS, Recharts
+- [x] FastAPI orchestration — seamless integration between Next.js frontend and trading pipeline
 
 ## License
 

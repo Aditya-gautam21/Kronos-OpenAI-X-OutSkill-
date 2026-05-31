@@ -35,9 +35,3 @@ class SentimentAnalyzer:
             })
 
         return results
-
-
-if __name__ == "__main__":
-    analyzer = SentimentAnalyzer()
-    data = analyzer.fetch_and_analyze(hours=24)
-    print(data)

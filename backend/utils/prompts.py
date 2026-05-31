@@ -36,14 +36,14 @@ close, open, high, low, volume, SMA_50, SMA_200, RSI_14, MACD, MACDs, BB_LOWER, 
 {{
   "edge_found": true,
   "symbol": "ETHUSDT",
-  "direction": "long",
+  "direction": "short",
   "confidence": "high",
   "entry_price": 2075.40,
-  "stop_loss": 21505.61,
+  "stop_loss": 2150.61,
   "take_profit": 1972.63,
-  "hypothesis": "Bearish momentum confirmed by MACD below zero and price below both SMA 50 and 200. Negative sentiment from 11 of 16 headlines reinforces the downtrend.",
+  "hypothesis": "Bearish momentum confirmed by MACD below zero and price below both SMA 50 and 200. Negative sentiment from 11 of 16 headlines reinforces the downtrend. RSI at 43 shows room to fall before oversold.",
   "supporting_data": {{
-    "risk_reward_ratio": 2.0,
+    "risk_reward_ratio": 2.1,
     "rsi_value": 43.97,
     "bb_position": "mid",
     "sentiment_lean": "negative (11 negative vs 5 positive across 9 sources)"

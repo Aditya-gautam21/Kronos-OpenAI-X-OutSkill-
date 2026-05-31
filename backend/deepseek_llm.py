@@ -47,15 +47,16 @@ class DeepSeekLLM:
         }
 
 
-def get_deepseek_llm() -> DeepSeekLLM:
+def get_deepseek_llm():
     """Singleton DeepSeekLLM instance."""
     global _deepseek_llm
     if _deepseek_llm is None:
-        chat = ChatDeepSeek(
+        llm = ChatDeepSeek(
             model="deepseek-chat",
             api_key=os.getenv("DEEPSEEK_API_KEY"),
-            temperature=0.25,
-            max_tokens=4096,
+            temperature=0.21,
+            verbose=False,
+            timeout=None,
+            max_retries=2
         )
-        _deepseek_llm = DeepSeekLLM(chat)
-    return _deepseek_llm
+    return llm

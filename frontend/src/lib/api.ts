@@ -36,6 +36,8 @@ export async function fetchLogs() {
 }
 
 export async function startBot() {
-  const res = await fetch(`${API_BASE}/start-autonomous-bot`, { method: "POST" });
+  const res = await fetch(`${API_BASE}/start-autonomous-bot`, {
+    method: "POST",
+  });
   return res.json();
 }

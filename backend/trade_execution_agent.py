@@ -143,9 +143,3 @@ class TradeExecutionAgent:
 
         print("DONE — check testnet.binancefuture.com")
         return result
-
-
-if __name__ == "__main__":
-    agent = TradeExecutionAgent()
-    result = agent.execute()
-    print("\n" + json.dumps(result, indent=2))

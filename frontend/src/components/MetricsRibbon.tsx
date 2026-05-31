@@ -38,52 +38,28 @@ export function MetricsRibbon() {
     return () => clearInterval(interval);
   }, [refreshMetrics]);
 
+  const pnlColor = totalPnl >= 0 ? "text-green-neon" : "text-red-400";
+  const pnlSign = totalPnl >= 0 ? "+" : "";
+
   const handleToggleBot = async () => {
-    if (isActive) {
-      setIsActive(false);
-      setBotStatus({ message: "Pipeline stopped manually.", type: "success" });
-      return;
-    }
-
     setIsLoading(true);
-    setBotStatus({ message: "Initiating autonomous bot...", type: null });
-
+    setBotStatus({ message: "Executing autonomous pipeline...", type: null });
     try {
-      const data = await startBot();
-
-      if (data.status === "executed") {
-        setIsActive(true);
-        setBotStatus({
-          message: `Trade executed! ${data.result?.trade?.symbol || ""} ${data.result?.trade?.direction || ""}. Check Live Trades.`,
-          type: "success",
-        });
-        refreshMetrics();
-      } else if (data.status === "skipped") {
-        setBotStatus({
-          message: `Skipped: ${data.result?.reason || "No edge found"}`,
-          type: "error",
-        });
-        setIsActive(false);
-      } else if (data.status === "error") {
-        setBotStatus({
-          message: data.reason || data.result?.reason || "Backend error",
-          type: "error",
-        });
-        setIsActive(false);
+      const res = await startBot();
+      if (res.status === "error") {
+        setBotStatus({ message: `Error: ${res.reason}`, type: "error" });
+      } else if (res.status === "skipped") {
+        setBotStatus({ message: `Skipped: ${res.reason}`, type: "success" });
       } else {
-        setBotStatus({ message: "Unexpected response from backend.", type: "error" });
-        setIsActive(false);
+        setBotStatus({ message: "Trade executed successfully", type: "success" });
       }
-    } catch {
-      setBotStatus({ message: "Connection failed. Is FastAPI running on port 8000?", type: "error" });
-      setIsActive(false);
+      await refreshMetrics();
+    } catch (e: any) {
+      setBotStatus({ message: `Failed to connect: ${e.message || e}`, type: "error" });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const pnlColor = totalPnl >= 0 ? "text-green-neon" : "text-red-400";
-  const pnlSign = totalPnl >= 0 ? "+" : "";
 
   return (
     <div className="mb-6 space-y-4">

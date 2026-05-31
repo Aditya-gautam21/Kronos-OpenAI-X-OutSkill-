@@ -172,74 +172,9 @@ async def logs():
 
 @router.post("/start-autonomous-bot")
 async def start_bot():
-    state = load_state()
-    if state["is_running"]:
-        return {"status": "error", "reason": "Bot is already running"}
-
-    state["is_running"] = True
-    save_state(state)
-
-    add_log("SYSTEM", "Autonomous bot started. Research agent analyzing markets...", "info")
-    add_log("RESEARCH", "Fetching ETHUSDT 1h klines (200 candles) + news sentiment...", "info")
-
     try:
         agent = TradeExecutionAgent()
-        result = await asyncio.to_thread(agent.execute)
-
-        state = load_state()
-        state["is_running"] = False
-        state["bot_runs"] += 1
-        state["last_execution"] = datetime.now(timezone.utc).isoformat()
-        state["last_result"] = {k: v for k, v in result.items() if k != "orders"}
-
-        if result.get("status") == "executed":
-            trade = result.get("trade", {})
-            sizing = result.get("sizing", {})
-
-            trade_entry = {
-                "id": str(uuid.uuid4())[:8],
-                "symbol": trade.get("symbol", "UNKNOWN"),
-                "side": trade.get("direction", "unknown").upper(),
-                "size": sizing.get("quantity", 0),
-                "entry_price": trade.get("entry_price", 0),
-                "stop_loss": trade.get("stop_loss", 0),
-                "take_profit": trade.get("take_profit", 0),
-                "status": "active",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "pnl": None,
-                "confidence": trade.get("confidence", "unknown"),
-                "hypothesis": trade.get("hypothesis", ""),
-            }
-            state["trade_history"].append(trade_entry)
-
-            add_log("EXECUTION", f"Trade placed: {trade.get('symbol')} {trade.get('direction', '').upper()} x{LEVERAGE} | Entry: ${trade.get('entry_price')} | Qty: {sizing.get('quantity')} | Risk: {sizing.get('risk_pct')}%", "success")
-            add_log("EXECUTION", f"Stop-loss: ${trade.get('stop_loss')} | Take-profit: ${trade.get('take_profit')}", "info")
-            add_log("SYSTEM", f"Done. Check testnet.binancefuture.com for {trade.get('symbol')} position.", "success")
-
-        elif result.get("status") == "skipped":
-            add_log("QUANT", f"No trade taken: {result.get('reason', 'No edge found')}", "warning")
-
-        else:
-            add_log("SYSTEM", f"Bot finished with status: {result.get('status', 'unknown')}", "warning")
-
-        state["pipeline"] = {
-            "research": [
-                {"id": "LATEST", "time": "just now", "desc": (result.get("trade", {}).get("hypothesis", "Analyzing markets...") or "Scanning for setups")[:100]}
-            ] if result.get("trade") else [],
-            "backtest": [
-                {"id": "LATEST", "time": "just now", "desc": f"Confidence: {result.get('trade', {}).get('confidence', 'N/A')} | Direction: {result.get('trade', {}).get('direction', 'N/A')}"}
-            ] if result.get("trade") else [],
-            "risk_review": [
-                {"id": "LATEST", "time": "just now", "desc": f"Kelly sizing: {result.get('sizing', {}).get('risk_pct', 'N/A')}% risk | Qty: {result.get('sizing', {}).get('quantity', 'N/A')}"}
-            ] if result.get("sizing") else [],
-        }
-
-        save_state(state)
-        return {"status": result.get("status", "error"), "result": result}
-
+        result = agent.execute()
+        return result
     except Exception as e:
-        state = load_state()
-        state["is_running"] = False
-        save_state(state)
-        add_log("SYSTEM", f"Execution failed: {str(e)}", "error")
         return {"status": "error", "reason": str(e)}

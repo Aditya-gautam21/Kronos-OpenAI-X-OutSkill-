@@ -50,8 +50,7 @@ class TradeExecutionAgent:
             symbol=symbol,
             side=side,
             type="MARKET",
-            timeInForce="GTC",
-            quoteOrderQty=quantity
+            quantity=quantity
         )
 
     def place_sl(self, symbol: str, direction: str, stop_price: float, quantity: float) -> dict:
@@ -59,10 +58,10 @@ class TradeExecutionAgent:
         return self.client.futures_create_order(
             symbol=symbol,
             side=side,
-            type="STOP_LOSS",
+            type="STOP_MARKET",
             stopPrice=round(stop_price, 2),
-            quoteOrderQty=quantity,
-            reduceOnly="true",
+            quantity=quantity,
+            reduceOnly=True,
             workingType="MARK_PRICE",
             priceProtect="TRUE",
         )
@@ -72,16 +71,13 @@ class TradeExecutionAgent:
         return self.client.futures_create_order(
             symbol=symbol,
             side=side,
-            type="TAKE_PROFIT",
+            type="TAKE_PROFIT_MARKET",
             stopPrice=round(tp_price, 2),
             quantity=quantity,
-            reduceOnly="true",
+            reduceOnly=True,
             workingType="MARK_PRICE",
             priceProtect="TRUE",
         )
-
-    def _ok(self, order: dict) -> bool:
-        return "orderId" in order
 
     def execute(self) -> dict:
         print("--- Research Agent ---")
@@ -92,10 +88,7 @@ class TradeExecutionAgent:
             print(f"SKIP: {reason}")
             return {"status": "skipped", "reason": reason}
 
-        symbol = trade["symbol"]
-        print(f"Direction: {trade['direction'].upper()} | Confidence: {trade['confidence']}")
-        print(f"Entry: ${trade['entry_price']} | SL: ${trade['stop_loss']} | TP: ${trade['take_profit']}")
-        print(f"Hypothesis: {trade['hypothesis']}")
+        symbol = trade.get("symbol")
 
         balance = self.get_balance()
         print(f"Balance: ${balance:.2f}")
@@ -115,24 +108,18 @@ class TradeExecutionAgent:
             print(f"SKIP: zero quantity — {sizing.get('error', '')}")
             return {"status": "skipped", "reason": sizing.get("error", "zero quantity")}
 
-        qty = sizing["quantity"]
+        qty = sizing.get("quantity")
         print(f"Qty: {qty} | Notional: ${sizing['notional_usdt']} ({LEVERAGE}x) | Risk: {sizing['risk_pct']}%")
 
         print("--- Placing Orders ---")
-        #self.cancel_all_orders(symbol)
         self.set_leverage(symbol)
 
         result = {"status": "executed", "trade": trade, "sizing": sizing, "orders": {}}
 
         try:
-            entry = self.place_entry(symbol, trade["direction"], qty)
-            if self._ok(entry):
-                result["orders"]["entry"] = entry
-                print(f"ENTRY: {entry['side']} {qty} @ ${entry.get('price')} (ID: {entry['orderId']})")
-            else:
-                result["orders"]["entry"] = {"error": entry}
-                print(f"ENTRY FAILED: {entry}")
-                return result
+            entry = self.place_entry(symbol=symbol, direction=trade.get("direction"), quantity=qty)
+            result["orders"]["entry"] = entry
+            print(f"ENTRY placed: {entry.get('orderId', 'OK')}")
         except BinanceAPIException as e:
             result["orders"]["entry"] = {"error": str(e)}
             print(f"ENTRY FAILED: {e}")
@@ -140,24 +127,16 @@ class TradeExecutionAgent:
 
         try:
             sl = self.place_sl(symbol, trade["direction"], trade["stop_loss"], qty)
-            if self._ok(sl):
-                result["orders"]["stop_loss"] = sl
-                print(f"STOP LOSS: @ ${trade['stop_loss']} (ID: {sl['orderId']})")
-            else:
-                result["orders"]["stop_loss"] = {"error": sl}
-                print(f"SL FAILED: {sl}")
+            result["orders"]["stop_loss"] = sl
+            print(f"SL placed: {sl.get('orderId', 'OK')}")
         except BinanceAPIException as e:
             result["orders"]["stop_loss"] = {"error": str(e)}
             print(f"SL FAILED: {e}")
 
         try:
             tp = self.place_tp(symbol, trade["direction"], trade["take_profit"], qty)
-            if self._ok(tp):
-                result["orders"]["take_profit"] = tp
-                print(f"TAKE PROFIT: @ ${trade['take_profit']} (ID: {tp['orderId']})")
-            else:
-                result["orders"]["take_profit"] = {"error": tp}
-                print(f"TP FAILED: {tp}")
+            result["orders"]["take_profit"] = tp
+            print(f"TP placed: {tp.get('orderId', 'OK')}")
         except BinanceAPIException as e:
             result["orders"]["take_profit"] = {"error": str(e)}
             print(f"TP FAILED: {e}")
